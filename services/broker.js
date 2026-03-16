@@ -7,8 +7,26 @@ const { dispatch } = require('./mqtt-handlers');
 async function startBroker() {
     const MQTT_PORT = process.env.MQTT_PORT || 1883;
     const WS_PORT   = process.env.MQTT_WS_PORT || 8888;
+    const MQTT_USER = 'datos';
+    const MQTT_PASS = 'datos@2026';
 
     const aedes = await Aedes.createBroker();
+
+    aedes.authenticate = (client, username, password, callback) => {
+        const user = username ? username.toString() : '';
+        const pass = password ? password.toString() : '';
+        const isValid = user === MQTT_USER && pass === MQTT_PASS;
+
+        if (!isValid) {
+            console.log(`[MQTT] Autenticacion fallida para cliente ${client?.id ?? 'desconocido'}`);
+            const error = new Error('Credenciales MQTT invalidas');
+            error.returnCode = 4; // Bad username or password
+            return callback(error, false);
+        }
+
+        return callback(null, true);
+    };
+
     const mqttServer = net.createServer(aedes.handle);
     const httpServer = http.createServer();
     const wss = new WebSocketServer({ server: httpServer });
